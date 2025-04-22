@@ -41,6 +41,11 @@ library(webshot2)
 library(chromote)
 library(writexl)
 
+
+# install.packages("devtools")
+# devtools::install_github("statnmap/HatchedPolygons")
+# devtools::install_github("JohnCoene/typedjs")
+
 # renv::init()
 
 # Run this line and select option 2 for dockerizing.
