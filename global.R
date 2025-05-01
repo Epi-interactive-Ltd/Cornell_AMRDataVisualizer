@@ -72,6 +72,7 @@ source("Functions/columnDetectFunctions.R")
 source("Functions/regionMatching.R")
 source("Functions/parseWideColumns.R")
 source("Functions/formatAntibiogram.R")
+source("Functions/dataUtilityFunctions.R")
 
 #Data
 awareList <- read.csv("./Data/2023AwareClassifications.csv")
