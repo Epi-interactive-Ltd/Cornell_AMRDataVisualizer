@@ -10,6 +10,10 @@ importDataUI <- function(id) {
 # Module Server -----------------------------------------------------------
 importDataServer <- function(id) {
   moduleServer(id, function(input, output, session) {
+
+    # Sub-modules --------------------------------------------------------
+    changeLogServer("moChangeLog", changeLogData = changeMOLogData, cleanedData = cleanedData, availableData = availableData)
+    changeLogServer("abChangeLog", changeLogData = changeABLogData, cleanedData = cleanedData, availableData = availableData, type = "antimicrobial")
     
     ns <- session$ns
     
@@ -39,6 +43,9 @@ importDataServer <- function(id) {
     )
     displayCleanedData <- reactiveVal(FALSE)
     log <- reactiveVal()
+    # Hold the change logs
+    changeMOLogData <- reactiveVal()
+    changeABLogData <- reactiveVal()
 
 # Logic to disable dropdown menu if file is uploaded ----------------------
     observe({
@@ -130,6 +137,9 @@ importDataServer <- function(id) {
     observeEvent(input$processData, {
       req(availableData())
       
+      # Reset the change log data
+      changeMOLogData(NULL)
+      changeABLogData(NULL)
       showModal(modalDialog(
         title = "Processing Data",
         h4("Your data are being processed, please wait."),
@@ -155,6 +165,8 @@ importDataServer <- function(id) {
       ))
       
       results <- dataCleaner(availableData(), additionalCols = selections$additionalCols)
+      changeMOLogData(results$mo_log)
+      changeABLogData(results$ab_log)
       cleanedData(results$cleaned_data)
       displayCleanedData(TRUE)
       removeModal()
@@ -193,10 +205,8 @@ importDataServer <- function(id) {
             tabPanel("Microorganisms",
                      tabsetPanel(type = "tabs",
                                  tabPanel("Change Log",
-                                          pre(paste(
-                                            sprintf("%-50s %s %s", results$mo_log$Microorganism, "→", results$mo_log$mo_name),
-                                            collapse = "\n"
-                                          ))
+                                          changeLogUI(ns("moChangeLog"))
+                                          
                                  ),
                                  tabPanel("Uncertainties",
                                           pre(paste(uncertain_log, collapse = "\n"))
@@ -212,17 +222,22 @@ importDataServer <- function(id) {
             tabPanel("Antimicrobials",
                      tabsetPanel(type = "tabs",
                                  tabPanel("Change Log",
-                                          pre(paste(
-                                            sprintf("%-50s %s %s", results$ab_log$Antimicrobial, "→", results$ab_log$ab_name),
-                                            collapse = "\n"
-                                          ))
+                                          changeLogUI(ns("abChangeLog"))
                                  )
                      )
             )
           ),
           
           easyClose = FALSE,
-          footer = modalButton("Close")
+          footer = div(
+            id = "import-modal-footer",
+            div(
+              class = "warning-parent",
+              p(class = "antimicrobial-warning", "Please save changes made to the Antimicrobial change log"),
+              p(class = "microorganism-warning", "Please save changes made to the Microorganism change log")
+            ),
+            modalButton("Close")
+          )
         ))
       })
       
@@ -632,6 +647,7 @@ importDataServer <- function(id) {
             !is.na(Value)
           )
       }
+      filteredData$InternalID <- seq_len(nrow(filteredData))
       
       return(filteredData)
     })
@@ -653,13 +669,16 @@ importDataServer <- function(id) {
           mutate(Date = as.character(Date))
       }
       
-      head(availableData, 100)
+      head(availableData, 100) %>%
+        select(-InternalID)
     })
     
 # Preview of Cleaned Data -------------------------------------------------
     output$cleanedDataPreview <- renderDT({
       req(cleanedData())
-      DT::datatable(head(cleanedData(), 100), 
+      data <- head(cleanedData(), 100) %>%
+        select(-InternalID)
+      DT::datatable(data, 
                     options = list(
                       dom = 't',
                       ordering = FALSE,

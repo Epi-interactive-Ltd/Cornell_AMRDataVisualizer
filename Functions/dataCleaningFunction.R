@@ -101,6 +101,7 @@ dataCleaner <- function(rawData, additionalCols = NULL) {
                          # Replace microorganism and antimicrobial columns with precomputed values
                          cleanedChunk <- chunk %>%
                            mutate(
+                            InternalID = as.character(InternalID),
                              ID = as.character(ID),
                              Year = if ("Year" %in% names(.)) getValidYear(Year) else NA_integer_,
                              
@@ -149,7 +150,7 @@ dataCleaner <- function(rawData, additionalCols = NULL) {
                              Interpretation = sapply(Interpretation, normalize_interpretation)
                            ) %>%
                            select(
-                             ID, Date, Region, Subregion, Species, Source, 
+                             InternalID, ID, Date, Region, Subregion, Species, Source, 
                              Microorganism, Antimicrobial, Class, Interpretation
                            )
                          

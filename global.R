@@ -65,6 +65,7 @@ source("Modules/pathogenPage.R")
 source("Modules/explorePage.R")
 source("Modules/importDataModule.R")
 source("Modules/filterPanelModule.R")
+source("Modules/changeLogModule.R")
 
 #Functions
 source("Functions/dataCleaningFunction.R")
