@@ -39,7 +39,12 @@ importDataServer <- function(id) {
       additionalCols = NULL
     )
     displayCleanedData <- reactiveVal(FALSE)
-    log <- reactiveVal()
+    
+    mo_change_log <- reactiveVal(NULL)
+    mo_uncertain_log <- reactiveVal(NULL)
+    mo_failure_log <- reactiveVal(NULL)
+    mo_renamed_log <- reactiveVal(NULL)
+    ab_change_log <- reactiveVal(NULL)
 
 # Logic to disable dropdown menu if file is uploaded ----------------------
     observe({
@@ -159,7 +164,10 @@ importDataServer <- function(id) {
       displayCleanedData(TRUE)
       removeModal()
       
-      renamed_log <- if (is.null(results$mo_renamed) || nrow(results$mo_renamed) < 1) {
+      mo_change_log <- sprintf("%-50s %s %s", results$mo_log$Microorganism, "→", results$mo_log$mo_name)
+      mo_change_log(mo_change_log)
+      
+      mo_renamed_log <- if (is.null(results$mo_renamed) || nrow(results$mo_renamed) < 1) {
         "No renamed microorganisms were found."
       } else {
         paste0(
@@ -170,14 +178,20 @@ importDataServer <- function(id) {
           " (", results$mo_renamed$ref_new, ")"
         )
       }
+      mo_renamed_log(mo_renamed_log)
       
-      uncertain_log <- capture.output(print(results$mo_uncertainties, n = Inf))
+      mo_uncertain_log <- capture.output(print(results$mo_uncertainties, n = Inf))
+      mo_uncertain_log(mo_uncertain_log)
       
-      failure_log <- if (is.null(results$mo_failures) || length(results$mo_failures) < 1) {
+      mo_failure_log <- if (is.null(results$mo_failures) || length(results$mo_failures) < 1) {
         "No failures."
       } else {
         results$mo_failures
       }
+      mo_failure_log(mo_failure_log)
+      
+      ab_change_log <- sprintf("%-50s %s %s", results$ab_log$Antimicrobial, "→", results$ab_log$ab_name)
+      ab_change_log(ab_change_log)
       
       shinyjs::delay(500, {
         showModal(modalDialog(
@@ -193,41 +207,37 @@ importDataServer <- function(id) {
             tabPanel("Microorganisms",
                      tabsetPanel(type = "tabs",
                                  tabPanel("Change Log",
-                                          pre(paste(
-                                            sprintf("%-50s %s %s", results$mo_log$Microorganism, "→", results$mo_log$mo_name),
-                                            collapse = "\n"
-                                          ))
+                                          pre(paste(mo_change_log, collapse = "\n"))
                                  ),
                                  tabPanel("Uncertainties",
-                                          pre(paste(uncertain_log, collapse = "\n"))
+                                          pre(paste(mo_uncertain_log, collapse = "\n"))
                                  ),
                                  tabPanel("Failures",
-                                          pre(paste(failure_log, collapse = "\n"))
+                                          pre(paste(mo_failure_log, collapse = "\n"))
                                  ),
                                  tabPanel("Renames",
-                                          pre(paste(renamed_log, collapse = "\n"))
+                                          pre(paste(mo_renamed_log, collapse = "\n"))
                                  )
                      )
             ),
             tabPanel("Antimicrobials",
                      tabsetPanel(type = "tabs",
                                  tabPanel("Change Log",
-                                          pre(paste(
-                                            sprintf("%-50s %s %s", results$ab_log$Antimicrobial, "→", results$ab_log$ab_name),
-                                            collapse = "\n"
-                                          ))
+                                          pre(paste(ab_change_log, collapse = "\n"))
                                  )
                      )
             )
           ),
           
           easyClose = FALSE,
-          footer = modalButton("Close")
+          footer = tagList(
+            downloadButton(ns("download_log"), "Download Log File"),
+            modalButton("Close")
+          )
         ))
       })
       
     })
-    
     
     observe({
       req(input$sirCol)
@@ -908,6 +918,44 @@ importDataServer <- function(id) {
         ))
       }
     })
+    
+
+# Download Processing Log -------------------------------------------------
+
+    output$download_log <- downloadHandler(
+      filename = "ProcessingLog.html",
+      content = function(file) {
+        withProgress(message = 'Rendering, please wait!', {
+          
+          src <- normalizePath("./Reports/ProcessingLog.rmd")
+          tmp <- tempdir()
+          unlink(list.files(tmp, full.names = TRUE), recursive = TRUE, force = TRUE)
+          
+          owd <- setwd(tempdir())
+          on.exit({
+            setwd(owd)
+            unlink(c("ProcessingLog.rmd"), recursive = TRUE)
+          })
+          file.copy(src, "ProcessingLog.rmd", overwrite = TRUE)
+          
+          render_env <- new.env()
+          render_env$mo_change_log    <- mo_change_log()
+          render_env$mo_uncertain_log <- mo_uncertain_log()
+          render_env$mo_failure_log   <- mo_failure_log()
+          render_env$mo_renamed_log   <- mo_renamed_log()
+          render_env$ab_change_log    <- ab_change_log()
+          
+          rmarkdown::render(
+            input = "ProcessingLog.Rmd",
+            output_format = "html_document",
+            output_file = "ProcessingLog.html",
+            envir = render_env
+          )
+          
+          file.rename("ProcessingLog.html", file)
+        })
+      }
+    )
     
     return(
       data = reactive({ cleanedData() })
