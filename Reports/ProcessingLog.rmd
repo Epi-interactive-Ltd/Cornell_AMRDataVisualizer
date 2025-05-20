@@ -1,0 +1,48 @@
+---
+title: "Processing Log"
+geometry: margin=2cm
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+---
+
+# Microorganisms
+## Change Log
+```{r, echo = FALSE}
+datatable(
+  mo_change_log,
+  rownames = FALSE,
+  selection = "none",
+  filter = "top"
+)
+```
+
+## Uncertainties
+```{r, echo = FALSE}
+mo_uncertain_log <- strwrap(mo_uncertain_log, width = 90)
+cat(paste0(mo_uncertain_log), sep = "\n")
+```
+
+## Failures
+```{r, echo = FALSE}
+mo_failure_log <- strwrap(mo_failure_log, width = 90)
+cat(paste0(mo_failure_log), sep = "\n")
+```
+
+## Renames
+```{r, echo = FALSE}
+mo_renamed_log <- strwrap(mo_renamed_log, width = 90)
+cat(paste0(mo_renamed_log), sep = "\n")
+```
+
+# Antimicrobials
+## Change Log
+```{r, echo = FALSE}
+datatable(
+  ab_change_log,
+  rownames = FALSE,
+  selection = "none",
+  filter = "top"
+)
+```

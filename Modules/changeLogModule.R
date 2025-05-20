@@ -6,8 +6,8 @@ changeLogUI <- function(id) {
     useShinyjs(),
     div(
       style = "display: flex; justify-content: end; align-items: center; gap: 1rem;",
-      actionButton(ns('reset'), 'reset', class = "changeLogButton white"),
-      actionButton(ns('save'), 'save', class = "changeLogButton")
+      actionButton(ns('reset'), 'Reset', class = "changeLogButton white"),
+      actionButton(ns('save'), 'Save', class = "changeLogButton")
     ),
     dataTableOutput(ns("table"))
   )
@@ -25,12 +25,20 @@ changeLogServer <- function(id, changeLogData, cleanedData, availableData, type 
     ns <- session$ns
 
     currentChangeLogData <- reactiveVal(NULL)
+    tableChangeLogData <- reactiveVal(NULL) # Data passed back to be saved in html
 
     # Save the original change log data so that we can compare it to the current data.
     observe({
       currentChangeLogData(changeLogData())
     }) %>%
       bindEvent(changeLogData())
+
+    # Set this initially to populate it with the original data
+    observe({
+      data <- formattedData()
+      tableChangeLogData(data)
+    }) %>%
+      bindEvent(formattedData(), input$reset)
 
     #' Format the change log data to be displayed in the table.
     formattedData <- reactive({
@@ -120,6 +128,7 @@ changeLogServer <- function(id, changeLogData, cleanedData, availableData, type 
     # Triggered on the save button click.
     observe({
       newData <- fromJSON(input$updateTableData)
+      tableChangeLogData(newData)
       req(!is.null(newData))
 
       #' At this point need to update any rows with the value "Changed by user" (in the `action`
@@ -168,5 +177,7 @@ changeLogServer <- function(id, changeLogData, cleanedData, availableData, type 
     }) %>%
       bindEvent(input$save)
 
+    # Return the current change log data reactive
+    return(tableChangeLogData)
   })
 }
